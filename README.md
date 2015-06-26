@@ -12,7 +12,7 @@ Usage:
 
         if ( msg.Text != null )
         {
-            var message = bot.SendMessage( msg.Text );
+            var message = bot.SendMessage( msg.From.Id, msg.Text );
 			continue;
         }
 

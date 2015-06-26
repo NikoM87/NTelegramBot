@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using NTelegramBot.Types;
+using System.Collections.Specialized;
 
 namespace NTelegramBot
 {
@@ -14,17 +15,15 @@ namespace NTelegramBot
         private string _server = "https://api.telegram.org/bot";
         private readonly string _token;
 
-        private string GetRequst(string command)
+        private string GetRequst(string command, NameValueCollection parameters)
         {
-            UriBuilder url = new UriBuilder(_server + _token + "/" + command);
-            WebRequest request = WebRequest.Create(url.Uri);
-            Debug.Assert(request != null, "request != null");
-            WebResponse response = request.GetResponse();
-            Debug.Assert(response != null, "response != null");
-            Stream resStream = response.GetResponseStream();
-            Debug.Assert(resStream != null, "resStream != null");
-            StreamReader reader = new StreamReader(resStream);
-            return reader.ReadToEnd();
+
+            WebClient request = new WebClient();
+            request.BaseAddress = _server + _token + "/";
+            if (parameters != null)
+                request.QueryString.Add(parameters);
+
+            return request.DownloadString(command);
         }
 
         public TelegramLoader(string token)
@@ -34,43 +33,39 @@ namespace NTelegramBot
 
         public Request<Update[]> GetUpdates()
         {
-            return JsonConvert.DeserializeObject<Request<Update[]>>(GetRequst("getUpdates"));
+            string json = GetRequst("getUpdates", null);
+            return JsonConvert.DeserializeObject<Request<Update[]>>(json);
         }
 
         public Request<Update[]> GetUpdates(long updateId)
         {
-            StringBuilder commandString = new StringBuilder("getUpdates");
-            commandString.Append("?offset=");
-            commandString.Append(updateId);
+            NameValueCollection query = new NameValueCollection();
+            query.Add("offset", updateId.ToString());
 
-            var s = GetRequst(commandString.ToString());
-            return JsonConvert.DeserializeObject<Request<Update[]>>(s);
+            var json = GetRequst("getUpdates", query);
+            return JsonConvert.DeserializeObject<Request<Update[]>>(json);
         }
 
         public Request<Message> SendMessage(long chatId, string text)
         {
-            StringBuilder commandString = new StringBuilder("sendMessage");
-            commandString.Append("?chat_id=");
-            commandString.Append(chatId);
-            commandString.Append("&text=");
-            commandString.Append( text);
+            NameValueCollection query = new NameValueCollection();
+            query.Add("chat_id", chatId.ToString());
+            query.Add("text", text.ToString());
 
-            var s = GetRequst(commandString.ToString());
-            return JsonConvert.DeserializeObject<Request<Message>>(s);
+            var json = GetRequst("sendMessage", query);
+            return JsonConvert.DeserializeObject<Request<Message>>(json);
         }
 
         public Request<Location> SendLocation(long chatId, Location location)
         {
-            StringBuilder commandString = new StringBuilder("sendLocation");
-            commandString.Append("?chat_id=");
-            commandString.Append(chatId);
-            commandString.Append("&latitude=");
-            commandString.Append(location.Latitude.ToString(CultureInfo.InvariantCulture));
-            commandString.Append("&longitude=");
-            commandString.Append(location.Longitude.ToString(CultureInfo.InvariantCulture));
 
-            string requestText = GetRequst(commandString.ToString());
-            return JsonConvert.DeserializeObject<Request<Location>>(requestText);
+            NameValueCollection query = new NameValueCollection();
+            query.Add("chat_id", chatId.ToString());
+            query.Add("latitude", location.Latitude.ToString(CultureInfo.InvariantCulture));
+            query.Add("longitude", location.Longitude.ToString(CultureInfo.InvariantCulture));
+
+            string json = GetRequst("sendLocation", query);
+            return JsonConvert.DeserializeObject<Request<Location>>(json);
         }
     }
 }
